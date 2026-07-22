@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死锁机制与解决方案</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --paper: #ffffff;
+      --ink: #1c2430;
+      --muted: #667085;
+      --line: #dbe2ea;
+      --accent: #0f766e;
+      --accent-2: #2563eb;
+      --soft: #eef7f5;
+      --shadow: 0 18px 45px rgba(15, 23, 42, .08);
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(15, 118, 110, .09), transparent 30%),
+        linear-gradient(180deg, #f3f7fa 0%, var(--bg) 360px, var(--bg) 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.75;
+      letter-spacing: 0;
+    }
+    a { color: var(--accent-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .progress { position: fixed; inset: 0 auto auto 0; width: 0; height: 3px; z-index: 10; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+      gap: 28px;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .toc-panel {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 18px 16px;
+      background: rgba(255, 255, 255, .86);
+      border: 1px solid rgba(219, 226, 234, .9);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, .05);
+      backdrop-filter: blur(12px);
+    }
+    .toc-title {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .toc-panel ul { list-style: none; padding-left: 0; margin: 0; }
+    .toc-panel li { margin: 3px 0; }
+    .toc-panel ul ul { padding-left: 14px; margin-top: 3px; border-left: 1px solid var(--line); }
+    .toc-panel a {
+      display: block;
+      padding: 5px 6px;
+      border-radius: 6px;
+      color: #425466;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .toc-panel a:hover, .toc-panel a.active { background: var(--soft); color: var(--accent); text-decoration: none; }
+    main {
+      min-width: 0;
+      background: var(--paper);
+      border: 1px solid rgba(219, 226, 234, .9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    article { padding: 46px min(6vw, 76px) 68px; }
+    h1 {
+      margin: -46px min(-6vw, -76px) 34px;
+      padding: 58px min(6vw, 76px) 44px;
+      color: #fff;
+      background: linear-gradient(135deg, #0f766e 0%, #155e75 52%, #1d4ed8 100%);
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 1.14;
+      font-weight: 800;
+    }
+    h2 {
+      margin: 54px 0 18px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      font-size: clamp(22px, 2.3vw, 30px);
+      line-height: 1.35;
+      color: #0f172a;
+    }
+    h3 { margin: 34px 0 12px; font-size: 21px; color: #17324d; }
+    h4 { margin: 26px 0 10px; font-size: 17px; color: #344054; }
+    p { margin: 12px 0; }
+    strong { color: #0f172a; font-weight: 700; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+    blockquote {
+      margin: 18px 0 24px;
+      padding: 12px 16px;
+      color: #475467;
+      background: var(--soft);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    ul, ol { padding-left: 1.35em; }
+    li { margin: 4px 0; }
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      margin: 18px 0 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+      table-layout: auto;
+    }
+    th, td {
+      min-width: 112px;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      background: #fff;
+    }
+    th {
+      color: #0f172a;
+      background: #eef4f8;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    tr:nth-child(even) td { background: #fbfcfe; }
+    tr:last-child td { border-bottom: 0; }
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 24px auto 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+      background: #fff;
+    }
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #f1f5f9;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .92em;
+    }
+    pre { overflow: auto; padding: 16px; background: #0f172a; color: #e5e7eb; border-radius: var(--radius); }
+    pre code { padding: 0; color: inherit; background: transparent; }
+    .mermaid {
+      margin: 26px 0 30px;
+      padding: 18px;
+      overflow-x: auto;
+      text-align: center;
+      background: #fbfcfe;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .mermaid svg { max-width: 100%; height: auto; }
+    .back-top {
+      display: none;
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, .2);
+      cursor: pointer;
+    }
+    .back-top.show { display: block; }
+    @media (max-width: 1020px) {
+      .layout { display: block; padding: 14px; }
+      .toc-panel { position: relative; top: 0; max-height: 280px; margin-bottom: 14px; }
+      article { padding: 28px 18px 42px; }
+      h1 { margin: -28px -18px 28px; padding: 38px 18px 32px; }
+      th, td { min-width: 120px; padding: 10px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .layout { display: block; max-width: none; padding: 0; }
+      .toc-panel, .progress, .back-top { display: none !important; }
+      main { border: 0; box-shadow: none; }
+      article { padding: 0; }
+      h1 { margin: 0 0 24px; color: #111827; background: none; padding: 0; }
+      a { color: inherit; }
+      .table-scroll, table { page-break-inside: avoid; }
+      img, blockquote, pre { page-break-inside: avoid; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress"></div>
+  <div class="layout">
+    <aside class="toc-panel" aria-label="目录">
+      <p class="toc-title">目录</p>
+      <div class="toc">
+<ul>
+<li><a href="#_1">死锁机制与解决方案</a><ul>
+<li><a href="#head-on-deadlock">一、对头死锁（Head-on Deadlock）</a><ul>
+<li><a href="#_2">场景</a></li>
+<li><a href="#_3">检测方式</a></li>
+<li><a href="#_4">解决方案</a></li>
+</ul>
+</li>
+<li><a href="#intersection-deadlock">二、路口死锁（Intersection Deadlock）</a><ul>
+<li><a href="#_5">场景</a></li>
+<li><a href="#_6">检测方式</a></li>
+<li><a href="#_7">解决方案</a></li>
+</ul>
+</li>
+<li><a href="#circular-wait">三、环形等待（Circular Wait）</a><ul>
+<li><a href="#_8">场景</a></li>
+<li><a href="#_9">检测方式</a></li>
+<li><a href="#_10">解决方案</a></li>
+</ul>
+</li>
+<li><a href="#dead-end-trap">四、死胡同陷阱（Dead End Trap）</a><ul>
+<li><a href="#_11">场景</a></li>
+<li><a href="#_12">检测方式</a></li>
+<li><a href="#_13">解决方案</a></li>
+</ul>
+</li>
+<li><a href="#_14">总结对比</a><ul>
+<li><a href="#_15">算法覆盖矩阵</a></li>
+<li><a href="#_16">关键设计原则</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </aside>
+    <main>
+      <article>
+        <h1 id="_1">死锁机制与解决方案</h1>
+<blockquote>
+<p>蓝色海湾 AGV 调度仿真引擎 — 死锁分析文档</p>
+<p>场景：13台T4无人配送车，1978户小区，无4G网络，LORA低带宽离线通信</p>
+</blockquote>
+<hr />
+
+<div style="margin: 32px 0;">
+  <img src="https://smartlg.oss-cn-hangzhou.aliyuncs.com/app/死锁配图.png" alt="AGV死锁机制与解决方案信息图" style="display:block; max-width:100%; height:auto; margin:0 auto; border:1px solid var(--line, #e2e8f0); border-radius:8px; box-shadow:0 12px 28px rgba(15,23,42,.08);">
+  <p style="text-align:center; font-size:13px; color:#64748b; margin-top:8px;">图：AGV无人配送车离线死锁机制与解决方案总览</p>
+</div>
+<h2 id="head-on-deadlock">一、对头死锁（Head-on Deadlock）</h2>
+<h3 id="_2">场景</h3>
+<p>两辆AGV在同一条窄路（容量=1，无法会车）上相向行驶，谁都无法通过，也无法倒车避让。</p>
+<pre><code>  AGV-1 →                          ← AGV-2
+  ┌──────┐                        ┌──────┐
+  │ 载货  │══════════════════════│ 空车  │
+  └──────┘    窄路(容量=1)       └──────┘
+              ← 4米宽，只能过一辆 →
+</code></pre>
+<p><strong>蓝色海湾实例</strong>：两栋楼之间的连接小道，宽度仅容一车。一辆载货车从3栋去5栋，另一辆空车从5栋回驿站，在小道中段相遇。</p>
+<h3 id="_3">检测方式</h3>
+<pre><code>条件：同一路段(edge)上存在两辆AGV，行驶方向相反，且该路段 capacity == 1
+</code></pre>
+<p>算法伪代码：</p>
+<pre><code class="language-rust">fn detect_headon(map: &amp;Map, agvs: &amp;[Agv]) -&gt; Vec&lt;Deadlock&gt; {
+    let mut deadlocks = vec![];
+    for edge in map.edges() {
+        if edge.capacity &gt; 1 { continue; }  // 宽路不会对头死锁
+        let agvs_on_edge: Vec&lt;&amp;Agv&gt; = agvs.iter()
+            .filter(|a| a.current_edge == edge.id)
+            .collect();
+        if agvs_on_edge.len() &lt; 2 { continue; }
+        // 检查是否有反向行驶的
+        let has_forward = agvs_on_edge.iter().any(|a| a.direction == edge.direction);
+        let has_reverse = agvs_on_edge.iter().any(|a| a.direction != edge.direction);
+        if has_forward &amp;&amp; has_reverse {
+            deadlocks.push(Deadlock::Headon { edge_id: edge.id, agvs: agvs_on_edge });
+        }
+    }
+    deadlocks
+}
+</code></pre>
+<h3 id="_4">解决方案</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>原理</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>路段预约制</strong></td>
+<td>AGV出发前预定整条路径的所有窄路段，后续AGV不能使用已被预定的路段</td>
+<td>绝对不死锁</td>
+<td>路段利用率极低，吞吐量差</td>
+</tr>
+<tr>
+<td><strong>滑动窗口预约</strong></td>
+<td>只预定前方N段（如3段），走完释放、再预定新的</td>
+<td>比全路段预约更高效</td>
+<td>窗口重叠时仍可能死锁</td>
+</tr>
+<tr>
+<td><strong>优先级协商</strong></td>
+<td>通过LORA广播意图，低优先级AGV倒车到最近可会让点</td>
+<td>去中心化，接近真实离线场景</td>
+<td>需要地图上有可会让点；倒车路径规划复杂</td>
+</tr>
+<tr>
+<td><strong>单向化改造</strong></td>
+<td>把易堵窄路在地图层面设为单向</td>
+<td>从根源消除对头可能</td>
+<td>可能增加绕路距离</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>推荐策略</strong>：优先级协商 + 地图层面标注会车点。AGV在进入窄路前通过LORA广播意图，如果检测到对向来车且自己优先级低，在会车点等待。</p>
+<hr />
+<h2 id="intersection-deadlock">二、路口死锁（Intersection Deadlock）</h2>
+<h3 id="_5">场景</h3>
+<p>多台AGV同时到达一个十字路口（或T字路口），每台车都在等别人先过，结果谁都过不去。</p>
+<pre><code>         AGV-B
+          ↓
+    ──────┬──────
+    AGV-C → │ ← AGV-D    ← 四台车同时到路口
+    ──────┴──────
+          ↑
+         AGV-A
+
+  都在等：你先过 → 没人过 → 死锁
+</code></pre>
+<p><strong>蓝色海湾实例</strong>：小区中心十字路口，四台车分别从四个方向同时到达。没有4G信号、没有红绿灯、没有中心调度，每台车都&rdquo;礼让&rdquo;等待，结果全堵。</p>
+<h3 id="_6">检测方式</h3>
+<pre><code>条件：路口节点(node)的每条入边(incoming edge)上都有AGV处于等待状态
+</code></pre>
+<p>算法伪代码：</p>
+<pre><code class="language-rust">fn detect_intersection(map: &amp;Map, agvs: &amp;[Agv]) -&gt; Vec&lt;Deadlock&gt; {
+    let mut deadlocks = vec![];
+    for node in map.intersections() {
+        let incoming: Vec&lt;&amp;Edge&gt; = map.incoming_edges(node.id);
+        let all_blocked = incoming.iter().all(|e| {
+            agvs.iter().any(|a| a.current_edge == e.id &amp;&amp; a.state == AgvState::Waiting)
+        });
+        if all_blocked &amp;&amp; incoming.len() &gt;= 2 {
+            deadlocks.push(Deadlock::Intersection { node_id: node.id, agvs: waiting_agvs });
+        }
+    }
+    deadlocks
+}
+</code></pre>
+<h3 id="_7">解决方案</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>原理</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>路口互斥锁</strong></td>
+<td>把路口当作临界资源，同时只允许一台AGV通过</td>
+<td>简单可靠</td>
+<td>降低路口吞吐量</td>
+</tr>
+<tr>
+<td><strong>路段预约制</strong></td>
+<td>把路口作为特殊节点纳入路径预约</td>
+<td>绝对不死锁</td>
+<td>同对头死锁方案B的缺点</td>
+</tr>
+<tr>
+<td><strong>优先级+先到先过</strong></td>
+<td>到达时间戳最早的AGV优先通过；同时到达则按载货&gt;空车&gt;回充排序</td>
+<td>无需中心协调</td>
+<td>需要LORA同步时钟（近似即可）</td>
+</tr>
+<tr>
+<td><strong>虚拟信号灯</strong></td>
+<td>给路口分配固定时间片轮转（如东-西3秒，南-北3秒）</td>
+<td>公平，实现简单</td>
+<td>LORA同步精度要求较高</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>推荐策略</strong>：优先级+先到先过。每台AGV通过LORA广播&rdquo;我到路口了 + 时间戳 + 优先级&rdquo;，所有等待车按（时间戳, 优先级）排序，最优先的通过，其余等待。</p>
+<hr />
+<h2 id="circular-wait">三、环形等待（Circular Wait）</h2>
+<h3 id="_8">场景</h3>
+<p>A等B释放路段2，B等C释放路段3，C等A释放路段1，形成闭环——与操作系统教科书级的资源死锁完全同构。</p>
+<pre><code>         AGV-A ──→ 等AGV-B让出路段2
+          ↑              ↓
+    路段3  │              │  路段1
+          │              ↓
+         AGV-C ←── 等AGV-C让出路段3 ← AGV-B
+</code></pre>
+<p><strong>蓝色海湾实例</strong>：三台AGV分别从驿站出发去6栋、7栋、8栋（三栋楼呈三角形排列），每台车占了一条楼前窄路后等待进入下一条，恰好形成闭环。</p>
+<h3 id="_9">检测方式</h3>
+<pre><code>构建等待图(Wait-For Graph):
+  - 节点 = AGV
+  - 有向边 A→B 表示 &quot;AGV-A 在等待 AGV-B 释放其占用的路段&quot;
+  - 检测图中是否存在环 → 存在环 = 环形死锁
+</code></pre>
+<p>算法：DFS染色法检测有向图环，时间复杂度 O(V+E)。</p>
+<pre><code class="language-rust">fn detect_circular_wait(map: &amp;Map, agvs: &amp;[Agv]) -&gt; Vec&lt;Deadlock&gt; {
+    // 1. 构建等待图
+    let mut wait_graph: HashMap&lt;AgvId, Vec&lt;AgvId&gt;&gt; = HashMap::new();
+    for agv in agvs {
+        if agv.state != AgvState::Waiting { continue; }
+        let next_edge = agv.path.next_edge();
+        if let Some(blocker) = find_agv_on_edge(agvs, next_edge) {
+            wait_graph.entry(agv.id).or_default().push(blocker.id);
+        }
+    }
+    // 2. DFS找环
+    find_cycles(&amp;wait_graph).into_iter()
+        .map(|cycle| Deadlock::CircularWait { cycle })
+        .collect()
+}
+</code></pre>
+<h3 id="_10">解决方案</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>原理</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>死锁检测+恢复</strong></td>
+<td>周期性检测等待图环，检测到后强制选一台AGV放弃当前路径、重路由</td>
+<td>不牺牲正常吞吐量</td>
+<td>恢复成本（放弃任务、绕路）</td>
+</tr>
+<tr>
+<td><strong>资源排序（全序）</strong></td>
+<td>给所有路段编号（1,2,3&hellip;），规定AGV只能按升序申请路段；如果下一段编号 &lt; 当前段编号，必须先释放当前段</td>
+<td>从根源消除环形等待</td>
+<td>限制路径规划自由度</td>
+</tr>
+<tr>
+<td><strong>优先级抢占</strong></td>
+<td>高优先级AGV可以&rdquo;抢断&rdquo;低优先级AGV占用的路段（低优先级AGV被踢出、重路由）</td>
+<td>结合业务优先级</td>
+<td>被抢占的AGV有额外成本</td>
+</tr>
+<tr>
+<td><strong>超时放弃</strong></td>
+<td>AGV等待超过阈值（如30秒）自动放弃当前路径，重新A*规划</td>
+<td>实现最简单</td>
+<td>可能反复超时,造成活锁</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>推荐策略</strong>：优先级抢占。载货车优先级高于空车，空车高于回充车。检测到环形等待时，环中优先级最低的AGV被强制放弃当前路段，退回到上一个节点重新规划路径。这保证了重要任务（载货配送）不受影响。</p>
+<hr />
+<h2 id="dead-end-trap">四、死胡同陷阱（Dead End Trap）</h2>
+<h3 id="_11">场景</h3>
+<p>AGV进入一条只有单出入口的断头路完成配送，返回时发现出口被另一辆AGV堵住了。</p>
+<pre><code>             驿站/主路
+                │
+      出口被堵 ← AGV-B停在这里（正在充电/等待任务）
+                │
+    ════════════╝
+    │  死胡同   │
+    │  AGV-A    │  ← 送完3栋的件，想出来
+    │  已被困   │    但唯一出口被AGV-B堵死
+    └───────────┘
+</code></pre>
+<p><strong>蓝色海湾实例</strong>：某栋楼门前只有一条路进去，末端是配送点。AGV-A进去送件，此时AGV-B开到路口停下（等任务/等充电/故障），AGV-A送完件想出来，唯一的出口被AGV-B堵死了。</p>
+<h3 id="_12">检测方式</h3>
+<pre><code>条件：节点只有一条边连接（degree == 1 的叶子节点），且那条边的容量已被占满
+</code></pre>
+<p>更精确的检测——AGV进入一段&rdquo;只有一个出口&rdquo;的区域后，出口被其他AGV占用：</p>
+<pre><code class="language-rust">fn detect_dead_end(map: &amp;Map, agvs: &amp;[Agv]) -&gt; Vec&lt;Deadlock&gt; {
+    let mut deadlocks = vec![];
+    for agv in agvs {
+        let current_node = map.node(agv.current_node);
+        // 当前节点是叶子节点（只有一条边进出）
+        if map.edges_of(current_node.id).len() == 1 {
+            let only_edge = map.edges_of(current_node.id)[0];
+            // 检查唯一出口是否被其他AGV占用
+            let occupied = agvs.iter().any(|other| {
+                other.id != agv.id &amp;&amp; other.current_edge == only_edge.id
+            });
+            if occupied {
+                deadlocks.push(Deadlock::DeadEnd {
+                    agv_id: agv.id,
+                    node_id: current_node.id,
+                    blocking_edge: only_edge.id,
+                    blocked_by: find_blocker(agvs, only_edge.id),
+                });
+            }
+        }
+    }
+    deadlocks
+}
+</code></pre>
+<h3 id="_13">解决方案</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>原理</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>地图设计避免</strong></td>
+<td>在路径规划阶段不允许出现断头路；所有配送点都设计成可环通的</td>
+<td>从根源消除</td>
+<td>受实际小区道路限制，不一定能做到</td>
+</tr>
+<tr>
+<td><strong>进入前检查</strong></td>
+<td>AGV进入断头区域前先检查出口是否可用；如果出口被占，在外面等待</td>
+<td>简单有效</td>
+<td>需要AGV有&rdquo;预判&rdquo;能力</td>
+</tr>
+<tr>
+<td><strong>路段预约制</strong></td>
+<td>进入断头路之前先预定出口路段，确保出来时不会被堵</td>
+<td>绝对安全</td>
+<td>降低路段利用率</td>
+</tr>
+<tr>
+<td><strong>倒车协议</strong></td>
+<td>当检测到死胡同时，堵在出口的AGV（如果非载货状态）收到指令主动让开</td>
+<td>事后补救</td>
+<td>依赖堵路AGV的配合能力</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>推荐策略</strong>：进入前检查 + 路段预约制。AGV的路径规划器识别出&rdquo;死胡同路段&rdquo;（度数=1的节点），在进入前检查：如果出口路段当前被占用，在外面等待；如果出口空闲，预定该路段后再进入。这样不会出现&rdquo;进去了出不来&rdquo;的情况。</p>
+<hr />
+<h2 id="_14">总结对比</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>死锁类型</th>
+<th>核心诱因</th>
+<th>检测复杂度</th>
+<th>根治方案</th>
+<th>实用方案（离线LORA场景）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>对头死锁</strong></td>
+<td>窄路+对向行驶</td>
+<td>O(E) 遍历所有边</td>
+<td>路段预约制</td>
+<td>优先级协商 + 会车点标注</td>
+</tr>
+<tr>
+<td><strong>路口死锁</strong></td>
+<td>多车同时抢路口</td>
+<td>O(V) 检查路口入边</td>
+<td>路口互斥锁</td>
+<td>先到先过 + 优先级排序</td>
+</tr>
+<tr>
+<td><strong>环形等待</strong></td>
+<td>等待链形成闭环</td>
+<td>O(V+E) DFS找环</td>
+<td>资源全序申请</td>
+<td>优先级抢占 + 重路由</td>
+</tr>
+<tr>
+<td><strong>死胡同</strong></td>
+<td>断头路+出口被堵</td>
+<td>O(V) 检查叶子节点</td>
+<td>地图设计避免</td>
+<td>进入前检查 + 出口预约</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="_15">算法覆盖矩阵</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>对头死锁</th>
+<th>路口死锁</th>
+<th>环形等待</th>
+<th>死胡同</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>纯乐观(Baseline)</td>
+<td>✗ 不处理</td>
+<td>✗ 不处理</td>
+<td>✗ 不处理</td>
+<td>✗ 不处理</td>
+</tr>
+<tr>
+<td>路段预约制</td>
+<td>✓ 根除</td>
+<td>✓ 根除</td>
+<td>✓ 根除</td>
+<td>✓ 根除</td>
+</tr>
+<tr>
+<td>滑动窗口预约</td>
+<td>△ 部分</td>
+<td>△ 部分</td>
+<td>△ 部分</td>
+<td>△ 部分</td>
+</tr>
+<tr>
+<td>优先级+LORA协商</td>
+<td>✓ 协商解决</td>
+<td>✓ 排序解决</td>
+<td>✓ 抢占解决</td>
+<td>✓ 预约解决</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>✓ = 完全解决  △ = 部分解决（取决于窗口大小）  ✗ = 不处理</p>
+</blockquote>
+<h3 id="_16">关键设计原则</h3>
+<ol>
+<li><strong>检测优于预防</strong>：仿真引擎必须能检测所有四种死锁，才能在对比实验中量化不同算法的效果</li>
+<li><strong>恢复机制是底线</strong>：任何算法都可能有意想不到的死锁场景，必须有兜底的恢复机制（超时重路由）</li>
+<li><strong>LORA带宽约束</strong>：所有分布式方案必须在&rdquo;每N秒一条几十字节的广播&rdquo;这个约束下工作，不能假设实时全量通信</li>
+<li><strong>优先级体系</strong>：载货车 &gt; 空车 &gt; 回充车，这个业务优先级贯穿所有死锁解决方案</li>
+</ol>
+      </article>
+    </main>
+  </div>
+  <button class="back-top" type="button" aria-label="返回顶部">↑</button>
+  
+  
+  <script>
+    (() => {
+      const progress = document.querySelector('.progress');
+      const topBtn = document.querySelector('.back-top');
+      const links = [...document.querySelectorAll('.toc-panel a[href^="#"]')];
+      const headings = links
+        .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+        .filter(Boolean);
+
+      function onScroll() {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        if (progress) progress.style.width = max > 0 ? `${scrollY / max * 100}%` : '0%';
+        if (topBtn) topBtn.classList.toggle('show', scrollY > innerHeight);
+
+        let current = headings[0];
+        for (const h of headings) {
+          if (h.getBoundingClientRect().top <= 120) current = h;
+        }
+        links.forEach(a => a.classList.toggle('active', current && a.hash === `#${current.id}`));
+      }
+
+      addEventListener('scroll', onScroll, { passive: true });
+      topBtn?.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
+      onScroll();
+    })();
+  </script>
+
+</body>
+</html>

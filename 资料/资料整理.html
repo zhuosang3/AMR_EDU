@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EXP2 无人配送车 — 项目资料大全</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --paper: #ffffff;
+      --ink: #1c2430;
+      --muted: #667085;
+      --line: #dbe2ea;
+      --accent: #0f766e;
+      --accent-2: #2563eb;
+      --soft: #eef7f5;
+      --shadow: 0 18px 45px rgba(15, 23, 42, .08);
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(15, 118, 110, .09), transparent 30%),
+        linear-gradient(180deg, #f3f7fa 0%, var(--bg) 360px, var(--bg) 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.75;
+      letter-spacing: 0;
+    }
+    a { color: var(--accent-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .progress { position: fixed; inset: 0 auto auto 0; width: 0; height: 3px; z-index: 10; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+      gap: 28px;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .toc-panel {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 18px 16px;
+      background: rgba(255, 255, 255, .86);
+      border: 1px solid rgba(219, 226, 234, .9);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, .05);
+      backdrop-filter: blur(12px);
+    }
+    .toc-title {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .toc-panel ul { list-style: none; padding-left: 0; margin: 0; }
+    .toc-panel li { margin: 3px 0; }
+    .toc-panel ul ul { padding-left: 14px; margin-top: 3px; border-left: 1px solid var(--line); }
+    .toc-panel a {
+      display: block;
+      padding: 5px 6px;
+      border-radius: 6px;
+      color: #425466;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .toc-panel a:hover, .toc-panel a.active { background: var(--soft); color: var(--accent); text-decoration: none; }
+    main {
+      min-width: 0;
+      background: var(--paper);
+      border: 1px solid rgba(219, 226, 234, .9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    article { padding: 46px min(6vw, 76px) 68px; }
+    h1 {
+      margin: -46px min(-6vw, -76px) 34px;
+      padding: 58px min(6vw, 76px) 44px;
+      color: #fff;
+      background: linear-gradient(135deg, #0f766e 0%, #155e75 52%, #1d4ed8 100%);
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 1.14;
+      font-weight: 800;
+    }
+    h2 {
+      margin: 54px 0 18px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      font-size: clamp(22px, 2.3vw, 30px);
+      line-height: 1.35;
+      color: #0f172a;
+    }
+    h3 { margin: 34px 0 12px; font-size: 21px; color: #17324d; }
+    h4 { margin: 26px 0 10px; font-size: 17px; color: #344054; }
+    p { margin: 12px 0; }
+    strong { color: #0f172a; font-weight: 700; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+    blockquote {
+      margin: 18px 0 24px;
+      padding: 12px 16px;
+      color: #475467;
+      background: var(--soft);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    ul, ol { padding-left: 1.35em; }
+    li { margin: 4px 0; }
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      margin: 18px 0 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+      table-layout: auto;
+    }
+    th, td {
+      min-width: 112px;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      background: #fff;
+    }
+    th {
+      color: #0f172a;
+      background: #eef4f8;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    tr:nth-child(even) td { background: #fbfcfe; }
+    tr:last-child td { border-bottom: 0; }
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 24px auto 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+      background: #fff;
+    }
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #f1f5f9;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .92em;
+    }
+    pre { overflow: auto; padding: 16px; background: #0f172a; color: #e5e7eb; border-radius: var(--radius); }
+    pre code { padding: 0; color: inherit; background: transparent; }
+    .mermaid {
+      margin: 26px 0 30px;
+      padding: 18px;
+      overflow-x: auto;
+      text-align: center;
+      background: #fbfcfe;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .mermaid svg { max-width: 100%; height: auto; }
+    .back-top {
+      display: none;
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, .2);
+      cursor: pointer;
+    }
+    .back-top.show { display: block; }
+    @media (max-width: 1020px) {
+      .layout { display: block; padding: 14px; }
+      .toc-panel { position: relative; top: 0; max-height: 280px; margin-bottom: 14px; }
+      article { padding: 28px 18px 42px; }
+      h1 { margin: -28px -18px 28px; padding: 38px 18px 32px; }
+      th, td { min-width: 120px; padding: 10px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .layout { display: block; max-width: none; padding: 0; }
+      .toc-panel, .progress, .back-top { display: none !important; }
+      main { border: 0; box-shadow: none; }
+      article { padding: 0; }
+      h1 { margin: 0 0 24px; color: #111827; background: none; padding: 0; }
+      a { color: inherit; }
+      .table-scroll, table { page-break-inside: avoid; }
+      img, blockquote, pre { page-break-inside: avoid; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress"></div>
+  <div class="layout">
+    <aside class="toc-panel" aria-label="目录">
+      <p class="toc-title">目录</p>
+      <div class="toc">
+<ul>
+<li><a href="#exp2">EXP2 无人配送车 — 项目资料大全</a><ul>
+<li><a href="#_1">一、系统架构全貌</a></li>
+<li><a href="#_2">二、硬件平台</a></li>
+<li><a href="#urdf">三、机器人物理参数（来自 URDF）</a></li>
+<li><a href="#_3">四、传感器</a><ul>
+<li><a href="#41-lse-2027de">4.1 科力 LSE-2027DE 激光雷达</a></li>
+<li><a href="#42-jy901-imu-witmotion-10">4.2 JY901 IMU (WitMotion 10轴)</a></li>
+<li><a href="#43-canopen">4.3 CANopen 电机系统</a></li>
+</ul>
+</li>
+<li><a href="#2026-06-11">五、系统架构（当前 2026-06-11）</a></li>
+<li><a href="#pm2">六、PM2 进程列表（开机自启顺序）</a></li>
+<li><a href="#git">七、所有 Git 仓库</a></li>
+<li><a href="#_4">八、启动流程</a><ul>
+<li><a href="#81-amcl">8.1 导航模式（已有地图 → AMCL 定位）</a></li>
+<li><a href="#82-slam">8.2 建图模式（SLAM）</a></li>
+<li><a href="#83">8.3 前置检查</a></li>
+<li><a href="#84">8.4 设置初始位姿（命令行）</a></li>
+<li><a href="#85-rviz2-ssh">8.5 RViz2 启动（从 SSH 远程）</a></li>
+</ul>
+</li>
+<li><a href="#nav2">九、Nav2 Complete Configuration Parameters（Nav2 完整配置参数）</a><ul>
+<li><a href="#91-amcl-2026-06-11">9.1 AMCL Localization（AMCL 定位，2026-06-11 调参后）</a></li>
+<li><a href="#91b-robot_localization-ekf-2026-06-11">9.1b robot_localization EKF（新增，2026-06-11）</a></li>
+<li><a href="#92-regulated-pure-pursuit">9.2 Regulated Pure Pursuit Controller（Regulated Pure Pursuit 控制器）</a></li>
+<li><a href="#93-velocity-smoother">9.3 Velocity Smoother（速度平滑器）</a></li>
+<li><a href="#94">9.4 Costmap（代价地图）</a></li>
+<li><a href="#95">9.5 Collision Monitor（碰撞监视器）</a></li>
+<li><a href="#96">9.6 Behavior Tree（行为树）</a></li>
+<li><a href="#97">9.7 Global Planner（全局规划器）</a></li>
+</ul>
+</li>
+<li><a href="#slam-mapper_params_online_asyncyaml">十、SLAM Configuration（SLAM 配置，mapper_params_online_async.yaml）</a></li>
+<li><a href="#2026-05-27">十一、已踩过的坑（2026-05-27 修复记录）</a></li>
+<li><a href="#_5">十二、常用调试命令</a></li>
+<li><a href="#_6">十三、Map Files（地图文件）</a></li>
+<li><a href="#2026-06-11_1">十四、2026-06-11 旋转漂移修复 (关键改动)</a><ul>
+<li><a href="#141">14.1 根因</a></li>
+<li><a href="#142-0x6063-5600-countsrev">14.2 治本方案：位置差分里程计 (0x6063 → 5600 counts/rev)</a></li>
+<li><a href="#143-robot_localization-ekf">14.3 兜底方案：robot_localization EKF</a></li>
+<li><a href="#144">14.4 配套修复</a></li>
+<li><a href="#145">14.5 动车实测清单</a></li>
+<li><a href="#146">14.6 详细改动清单</a></li>
+</ul>
+</li>
+<li><a href="#ssh">十五、远程 SSH 注意事项</a></li>
+<li><a href="#_7">十六、相关文档</a></li>
+<li><a href="#_8">十七、其他常用脚本命令 &amp;&amp; 注意事项</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </aside>
+    <main>
+      <article>
+        <h1 id="exp2">EXP2 无人配送车 — 项目资料大全</h1>
+<blockquote>
+<p>最后更新: 2026-06-11<br />
+机器人: Orange Pi 5 Plus / Armbian Noble / ROS2 Jazzy<br />
+仓库组织: https://cnb.cool/zhazhatuan/edu/
+<strong>本次更新</strong>: 位置差分里程计 + EKF 融合 + 0x6063/0x6064 坑 + 轮距标定 0.39</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、系统架构全貌</h2>
+<pre><code>┌─ 硬件驱动层 (~/) ────────────┐     ┌─ ROS2 桥接层 (ros2_ws/src/) ─┐
+│                               │     │                               │
+│  imu_driver ──WS:8765──→  imu_bridge ──→ /imu                    │
+│  hls_canopen ─WS:9090─→  canopen_ros2 ──→ /odom, /tf            │
+│                                  └─────── ← /cmd_vel              │
+│  [keli_lidar ──UDP:2112──→  /scan]       (纯ROS2节点)            │
+│  [exp2_description ──────→  /tf_static, /robot_description]      │
+│  [exp2_nav ──────────────→  Nav2 导航栈]                          │
+└───────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>分层原则</strong>: 硬件驱动层无 ROS 依赖（纯 Rust cargo build），ROS2 桥接层通过 WebSocket 与驱动层通信。驱动可脱离 ROS 独立测试。</p>
+<hr />
+<h2 id="_2">二、硬件平台</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主控</td>
+<td>Orange Pi 5 Plus (RK3588, ARM64)</td>
+</tr>
+<tr>
+<td>系统</td>
+<td>Armbian 24.11 (Ubuntu 24.04 Noble)</td>
+</tr>
+<tr>
+<td>ROS 版本</td>
+<td>ROS2 Jazzy (LTS ~2030)</td>
+</tr>
+<tr>
+<td>网络</td>
+<td>主网口 enP4p65s0 (192.168.8.30), LiDAR 网口 enP3p49s0</td>
+</tr>
+<tr>
+<td>Shell</td>
+<td>zsh</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="urdf">三、机器人物理参数（来自 URDF）</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>底盘尺寸</td>
+<td>525mm(宽) × 600mm(长) × 200mm(高)</td>
+</tr>
+<tr>
+<td>底盘质量</td>
+<td>15kg</td>
+</tr>
+<tr>
+<td>驱动类型</td>
+<td><strong>前驱差速</strong>（前轴驱动 + 后万向轮）</td>
+</tr>
+<tr>
+<td>驱动轮距</td>
+<td>450mm (y=±225mm)</td>
+</tr>
+<tr>
+<td>驱动轮位置</td>
+<td>x=+215mm（前轴）</td>
+</tr>
+<tr>
+<td>轮半径</td>
+<td>84.5mm</td>
+</tr>
+<tr>
+<td>单轮质量</td>
+<td>0.5kg</td>
+</tr>
+<tr>
+<td>Nav2 机器人半径</td>
+<td>0.35m</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>坐标约定</strong>: x→前, y→左, z→上。原点 = 底盘几何中心。</p>
+<hr />
+<h2 id="_3">四、传感器</h2>
+<h3 id="41-lse-2027de">4.1 科力 LSE-2027DE 激光雷达</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>安装位置</td>
+<td>x=+298mm, y=0, z=+200mm（车头正前方）</td>
+</tr>
+<tr>
+<td>IP/端口</td>
+<td>192.168.8.11:2112 (UDP)</td>
+</tr>
+<tr>
+<td>测量范围</td>
+<td>0.05m ~ 10m</td>
+</tr>
+<tr>
+<td>扫描角度</td>
+<td>360° (-π ~ π), ~10Hz</td>
+</tr>
+<tr>
+<td>数据协议</td>
+<td>专属二进制协议 (<code>protocol/ls1207de_parser.rs</code>)</td>
+</tr>
+<tr>
+<td>ROS 话题</td>
+<td><code>/scan</code> (sensor_msgs/LaserScan)</td>
+</tr>
+<tr>
+<td>仓库</td>
+<td><code>cnb.cool/zhazhatuan/edu/keli_lidar</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="42-jy901-imu-witmotion-10">4.2 JY901 IMU (WitMotion 10轴)</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>安装位置</td>
+<td>x=+290mm, y=0, z=+200mm</td>
+</tr>
+<tr>
+<td>驱动层</td>
+<td><code>~/imu_driver</code> — 串口→WS:8765, USB热插拔</td>
+</tr>
+<tr>
+<td>桥接层</td>
+<td><code>~/ros2_ws/src/imu_bg</code> — WS→/imu (r2r)</td>
+</tr>
+<tr>
+<td>ROS 话题</td>
+<td><code>/imu</code> (sensor_msgs/Imu, ~100Hz)</td>
+</tr>
+<tr>
+<td>当前状态</td>
+<td>仅监控，Nav2 未消费（无 robot_localization EKF）</td>
+</tr>
+<tr>
+<td>仓库</td>
+<td><code>cnb.cool/zhazhatuan/edu/ros2_imu</code> (驱动), <code>cnb.cool/zhazhatuan/edu/imu_bg</code> (桥接)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="43-canopen">4.3 CANopen 电机系统</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>驱动器型号</td>
+<td>DS20270DA (UM系列伺服轮毂一体机)</td>
+</tr>
+<tr>
+<td>驱动方式</td>
+<td>前轮差速 + 后万向轮, 节点 ID 左=0x01 右=0x02</td>
+</tr>
+<tr>
+<td>CAN 接口</td>
+<td>can0, 1Mbps</td>
+</tr>
+<tr>
+<td>驱动层</td>
+<td><code>~/hls_canopen</code> — CAN bus→WS:9090, ~20Hz</td>
+</tr>
+<tr>
+<td>桥接层</td>
+<td><code>~/ros2_ws/src/canopen_ros2</code> — WS→/odom, 订阅 /cmd_vel</td>
+</tr>
+<tr>
+<td>物理参数</td>
+<td>轮半径 0.0845m, <strong>有效轮距 0.39m (标定值, 物理 450mm)</strong></td>
+</tr>
+<tr>
+<td>里程计算法</td>
+<td><strong>0x6063 位置差分</strong> (10000 counts/圈, 齿轮比 1:1, 中点法积分)</td>
+</tr>
+<tr>
+<td>速度反馈</td>
+<td>0x606C = 0.1 rpm/单位 (仅状态监控, 里程计不用)</td>
+</tr>
+<tr>
+<td>TF 广播</td>
+<td>EKF 替代, canopen_ros2 以 <code>--publish-tf false</code> 运行</td>
+</tr>
+<tr>
+<td>断线恢复</td>
+<td>CAN 故障冻结 pose 并重置计数基线, 防重连大跳变</td>
+</tr>
+<tr>
+<td>⚠️ 0x6064 坑</td>
+<td><strong>0x6064 恒为 0, 驱动器不填!</strong> 位置反馈在 0x6063</td>
+</tr>
+<tr>
+<td>仓库</td>
+<td><code>cnb.cool/zhazhatuan/edu/hls_canopen</code>, <code>cnb.cool/zhazhatuan/edu/canopen_ros2</code></td>
+</tr>
+<tr>
+<td>手册</td>
+<td><code>cnb.cool/zhazhatuan/XJKC/canopen_setup</code> doc/ 目录</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2026-06-11">五、系统架构（当前 2026-06-11）</h2>
+<pre><code>┌─ 硬件驱动层 (~/) ────────────┐     ┌─ ROS2 桥接层 (ros2_ws/src/) ──────────┐
+│                               │     │                                        │
+│  imu_driver ──WS:8765──→  imu_bridge ──→ /imu (100Hz, gyro cov 0.001)     │
+│  hls_canopen ─WS:9090─→  canopen_ros2 ──→ /odom (20Hz, 不发TF)            │
+│                           (--publish-tf false) │                             │
+│                                      ┌─────────┘                             │
+│                              ┌───────┴──────────┐                            │
+│                              │ ekf_filter_node   │ ← robot_localization      │
+│                              │ (world_frame=odom)│                            │
+│                              └───────┬──────────┘                            │
+│                                      └──→ /odometry/filtered (20Hz)          │
+│                                      └──→ TF odom→base_link (独家广播)       │
+│                                                                              │
+│  [keli_lidar ──UDP:2112──→  /scan]        (纯ROS2节点)                       │
+│  [exp2_description ──────→  /tf_static, /robot_description]                  │
+│  [exp2_nav ──────────────→  Nav2 导航栈]                                     │
+│      - bt_navigator.odom_topic = /odometry/filtered                          │
+│      - velocity_smoother.odom_topic = /odometry/filtered                     │
+│      - local_costmap.global_frame = odom                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>EKF 融合策略</strong>: odom 取 [vx, vyaw] + IMU 取 yaw 角速度 → /odometry/filtered.
+<strong>不融合</strong> IMU 线加速度（双重积分噪声爆炸, 轮式机器人不用）。
+AMCL 仍发布 map→odom（world_frame=odom）。</p>
+<hr />
+<h2 id="pm2">六、PM2 进程列表（开机自启顺序）</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>PM2 名称</th>
+<th>项目</th>
+<th>功能</th>
+<th>前置依赖</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>rsp</td>
+<td>exp2_description</td>
+<td>robot_state_publisher (发布 /tf_static)</td>
+<td>无</td>
+</tr>
+<tr>
+<td>2</td>
+<td>keli_lidar</td>
+<td>科力激光雷达驱动</td>
+<td>发布 /scan</td>
+<td>rsp</td>
+</tr>
+<tr>
+<td>3</td>
+<td>hls_canopen</td>
+<td>CANopen 电机驱动层</td>
+<td>CAN→WS:9090 (位置差分 odom)</td>
+<td>无</td>
+</tr>
+<tr>
+<td>4</td>
+<td>canopen_ros2</td>
+<td>CANopen→ROS2 桥接</td>
+<td>发布 /odom (不发TF); 订阅 /cmd_vel</td>
+<td>hls_canopen</td>
+</tr>
+<tr>
+<td>5</td>
+<td>imu_driver</td>
+<td>IMU 硬件驱动层</td>
+<td>串口→WS:8765</td>
+<td>无</td>
+</tr>
+<tr>
+<td>6</td>
+<td>imu_bridge</td>
+<td>IMU→ROS2 桥接</td>
+<td>WS→/imu (gyro cov 0.001)</td>
+<td>imu_driver</td>
+</tr>
+<tr>
+<td><strong>7</strong></td>
+<td><strong>ekf</strong></td>
+<td><strong>robot_localization</strong></td>
+<td><strong>融合 /odom+/imu → /odometry/filtered + TF</strong></td>
+<td><strong>canopen_ros2, imu_bridge</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>管理命令</strong>:</p>
+<pre><code class="language-bash">pm2 start all          # 启动全部
+pm2 list               # 查看状态
+pm2 restart &lt;name&gt;     # 重启单个
+pm2 restart &lt;name&gt; --disable-logs   # 重启并关闭日志
+</code></pre>
+<hr />
+<h2 id="git">七、所有 Git 仓库</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>仓库</th>
+<th>本地路径</th>
+<th>远程</th>
+<th>最新 commit</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>exp2_description</td>
+<td><code>~/ros2_ws/src/exp2_description</code></td>
+<td><code>cnb.cool/zhazhatuan/edu/exp2_description</code></td>
+<td><code>0f0be9d</code> (fix: 添加imu_link)</td>
+<td>✅ 已推送</td>
+</tr>
+<tr>
+<td>exp2_nav</td>
+<td><code>~/ros2_ws/src/exp2_nav</code></td>
+<td><code>cnb.cool/zhazhatuan/edu/exp2_nav</code></td>
+<td><code>98e8f7e</code> (fix: Nav2配置修复)</td>
+<td>✅ 已推送</td>
+</tr>
+<tr>
+<td>hls_canopen</td>
+<td><code>~/hls_canopen</code></td>
+<td><code>cnb.cool/zhazhatuan/edu/hls_canopen</code></td>
+<td><code>0e6ab2c</code> (CAN 重连)</td>
+<td>✅ 已推送</td>
+</tr>
+<tr>
+<td>imu_driver</td>
+<td><code>~/imu_driver</code></td>
+<td><code>cnb.cool/zhazhatuan/edu/ros2_imu</code></td>
+<td><code>d00a48d</code> (改名)</td>
+<td>✅ 已推送</td>
+</tr>
+<tr>
+<td>imu_bridge</td>
+<td><code>~/ros2_ws/src/imu_bg</code></td>
+<td><code>cnb.cool/zhazhatuan/edu/imu_bg</code></td>
+<td><code>0045598</code> (文档更新)</td>
+<td>✅ 已推送</td>
+</tr>
+<tr>
+<td>canopen_ros2</td>
+<td><code>~/ros2_ws/src/canopen_ros2</code></td>
+<td><code>cnb.cool/zhazhatuan/edu/canopen_ros2</code></td>
+<td><code>90ed542</code> (init)</td>
+<td>✅ 已推送</td>
+</tr>
+<tr>
+<td>keli_lidar</td>
+<td><code>~/ros2_ws/src/keli_lidar</code></td>
+<td><code>cnb.cool/zhazhatuan/edu/keli_lidar</code></td>
+<td><code>d718a01</code> (IP修正)</td>
+<td>✅ 已推送</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>所有代码改动后自动 commit + push（用户偏好）。</p>
+</blockquote>
+<hr />
+<h2 id="_4">八、启动流程</h2>
+<h3 id="81-amcl">8.1 导航模式（已有地图 → AMCL 定位）</h3>
+<pre><code class="language-bash"># 前提：PM2 所有驱动进程 running
+ros2 launch exp2_nav navigation.launch.py
+</code></pre>
+<p>此 launch 文件内部：</p>
+<ul>
+<li>启动 <code>localization_launch.py</code>（AMCL + map_server，加载 <code>/home/expressone/maps/my_map.yaml</code>）</li>
+<li>启动 <code>navigation_launch.py</code>（controller/planner/behavior/costmap 等节点）</li>
+</ul>
+<h3 id="82-slam">8.2 建图模式（SLAM）</h3>
+<pre><code class="language-bash">ros2 launch exp2_nav mapping.launch.py
+</code></pre>
+<p>此 launch 文件内部：</p>
+<ul>
+<li>启动 <code>navigation_launch.py</code></li>
+<li>启动 <code>async_slam_toolbox_node</code></li>
+<li>启动 <code>map_saver_server</code>（方便随时保存地图）</li>
+</ul>
+<p>保存地图：</p>
+<pre><code class="language-bash">ros2 run nav2_map_server map_saver_cli -f ~/maps/my_map
+</code></pre>
+<h3 id="83">8.3 前置检查</h3>
+<p>启动 Nav2 前确认：</p>
+<pre><code class="language-bash">ros2 topic list | grep -E &quot;/scan|/odom|/tf|/cmd_vel&quot;
+</code></pre>
+<p>五项必须全部在线：<code>/scan</code>, <code>/odom</code>, <code>/tf</code>, <code>/tf_static</code>, <code>/cmd_vel</code> 有订阅者。</p>
+<h3 id="84">8.4 设置初始位姿（命令行）</h3>
+<pre><code class="language-bash">ros2 topic pub --once /initialpose geometry_msgs/msg/PoseWithCovarianceStamped &quot;
+{header: {frame_id: map},
+ pose: {pose: {position: {x: 0.0, y: 0.0, z: 0.0},
+        orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}},
+        covariance: [0.25, 0.0, 0.0, 0.0, 0.0, 0.0,
+                     0.0, 0.25, 0.0, 0.0, 0.0, 0.0,
+                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                     0.0, 0.0, 0.0, 0.0, 0.0, 0.06853891909122467]}}&quot; \
+  --qos-reliability reliable
+</code></pre>
+<h3 id="85-rviz2-ssh">8.5 RViz2 启动（从 SSH 远程）</h3>
+<pre><code class="language-bash">DISPLAY=:0 XAUTHORITY=/run/user/1000/.mutter-Xwaylandauth.* rviz2 -d ~/ros2_ws/install/exp2_nav/share/exp2_nav/rviz/exp2.rviz
+</code></pre>
+<hr />
+<h2 id="nav2">九、Nav2 Complete Configuration Parameters（Nav2 完整配置参数）</h2>
+<h3 id="91-amcl-2026-06-11">9.1 AMCL Localization（AMCL 定位，2026-06-11 调参后）</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Parameter（参数）</th>
+<th>Value（值）</th>
+<th>Description（说明）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>运动模型</td>
+<td><code>nav2_amcl::DifferentialMotionModel</code> (Jazzy 格式)</td>
+<td></td>
+</tr>
+<tr>
+<td>粒子数</td>
+<td>500 ~ 2000</td>
+<td></td>
+</tr>
+<tr>
+<td>激光模型</td>
+<td>likelihood_field</td>
+<td></td>
+</tr>
+<tr>
+<td>地图帧</td>
+<td>map</td>
+<td></td>
+</tr>
+<tr>
+<td>里程计帧</td>
+<td>odom</td>
+<td></td>
+</tr>
+<tr>
+<td>基座帧</td>
+<td>base_link</td>
+<td></td>
+</tr>
+<tr>
+<td>odom 数据源</td>
+<td><strong>/odometry/filtered</strong> (EKF 输出)</td>
+<td></td>
+</tr>
+<tr>
+<td>alpha1 (旋转噪声)</td>
+<td><strong>0.4</strong> (<strong>2026-06-11: 0.2→0.4</strong>, odom 旋转差让 AMCL 多信激光)</td>
+<td></td>
+</tr>
+<tr>
+<td>update_min_a</td>
+<td><strong>0.1</strong> (0.2→0.1, 旋转&gt;0.1rad就更新)</td>
+<td></td>
+</tr>
+<tr>
+<td>transform_tolerance</td>
+<td><strong>0.5</strong> (1.0→0.5)</td>
+<td></td>
+</tr>
+<tr>
+<td>obstacle_max_range</td>
+<td><strong>2.5m</strong> (10→2.5, 减少远处干扰)</td>
+<td></td>
+</tr>
+<tr>
+<td>⚠️ imu_topic</td>
+<td><strong>已删除</strong> — nav2_amcl 没有 IMU 接口 (2026-05-29 那条改法是错的)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="91b-robot_localization-ekf-2026-06-11">9.1b robot_localization EKF（新增，2026-06-11）</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>频率</td>
+<td>20Hz</td>
+</tr>
+<tr>
+<td>world_frame</td>
+<td>odom</td>
+</tr>
+<tr>
+<td>two_d_mode</td>
+<td>true</td>
+</tr>
+<tr>
+<td>odom0 (/odom)</td>
+<td>取 [vx, vyaw]; yaw 协方差 0.05; <strong>不取绝对位姿</strong></td>
+</tr>
+<tr>
+<td>imu0 (/imu)</td>
+<td>仅 yaw 角速度; gyro 协方差 0.001; <strong>不融合线加速度</strong></td>
+</tr>
+<tr>
+<td>输出</td>
+<td>/odometry/filtered + TF odom→base_link (独家广播)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="92-regulated-pure-pursuit">9.2 Regulated Pure Pursuit Controller（Regulated Pure Pursuit 控制器）</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Parameter（参数）</th>
+<th>Value（值）</th>
+<th>Description（说明）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>desired_linear_vel</code></td>
+<td>0.5 m/s</td>
+<td>期望线速度</td>
+</tr>
+<tr>
+<td><code>lookahead_dist</code></td>
+<td>0.6m</td>
+<td>前视距离</td>
+</tr>
+<tr>
+<td><code>min_lookahead_dist</code></td>
+<td>0.4m</td>
+<td>最小前视</td>
+</tr>
+<tr>
+<td><code>max_lookahead_dist</code></td>
+<td>1.0m</td>
+<td>最大前视</td>
+</tr>
+<tr>
+<td><strong><code>rotate_to_heading_angular_vel</code></strong></td>
+<td><strong>0.3</strong></td>
+<td>🔧 前驱降级</td>
+</tr>
+<tr>
+<td><strong><code>max_angular_accel</code></strong></td>
+<td><strong>1.0</strong></td>
+<td>🔧 前驱降级</td>
+</tr>
+<tr>
+<td><code>max_linear_accel</code></td>
+<td>1.0</td>
+<td></td>
+</tr>
+<tr>
+<td>容差</td>
+<td>xy=0.05, yaw=0.05</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="93-velocity-smoother">9.3 Velocity Smoother（速度平滑器）</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Parameter（参数）</th>
+<th>Value（值）</th>
+<th>Description（说明）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>频率</td>
+<td>20Hz</td>
+<td></td>
+</tr>
+<tr>
+<td><code>max_velocity</code></td>
+<td>[0.5, 0.0, <strong>0.4</strong>]</td>
+<td>🔧 z 前驱降级</td>
+</tr>
+<tr>
+<td><code>min_velocity</code></td>
+<td>[-0.5, 0.0, -0.5]</td>
+<td></td>
+</tr>
+<tr>
+<td><code>max_accel</code></td>
+<td>[1.0, 0.0, <strong>0.6</strong>]</td>
+<td>🔧 z 前驱降级</td>
+</tr>
+<tr>
+<td><strong><code>max_decel</code></strong></td>
+<td><strong>[-1.0, 0.0, -1.0]</strong></td>
+<td>⚠️ Jazzy 必须负数</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="94">9.4 Costmap（代价地图）</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>Global Costmap（全局代价地图）</th>
+<th>Local Costmap（局部代价地图）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resolution（分辨率）</td>
+<td>0.05m</td>
+<td>0.05m</td>
+</tr>
+<tr>
+<td>Size（尺寸）</td>
+<td>跟随地图</td>
+<td>5×5m (rolling)</td>
+</tr>
+<tr>
+<td>Frame（坐标帧）</td>
+<td>map</td>
+<td>odom</td>
+</tr>
+<tr>
+<td>Robot Radius（机器人半径）</td>
+<td>0.35m</td>
+<td>0.35m</td>
+</tr>
+<tr>
+<td><strong>Inflation Radius（膨胀半径）</strong></td>
+<td><strong>0.55</strong></td>
+<td><strong>0.55</strong></td>
+</tr>
+<tr>
+<td>Plugins（插件）</td>
+<td>StaticLayer + ObstacleLayer + InflationLayer</td>
+<td>VoxelLayer + InflationLayer</td>
+</tr>
+<tr>
+<td>rolling_window</td>
+<td>—</td>
+<td><strong>true</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="95">9.5 Collision Monitor（碰撞监视器）</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Parameter（参数）</th>
+<th>Value（值）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>多边形</td>
+<td><code>[[0.55,0.45], [0.55,-0.45], [-0.45,-0.45], [-0.45,0.45]]</code></td>
+</tr>
+<tr>
+<td>动作</td>
+<td>stop</td>
+</tr>
+<tr>
+<td>观测源</td>
+<td>scan</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="96">9.6 Behavior Tree（行为树）</h3>
+<pre><code class="language-yaml">bt_navigator:
+  default_nav_to_pose_bt_xml: &quot;/opt/ros/jazzy/share/nav2_bt_navigator/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml&quot;
+  # plugin_lib_names 已删除 — Jazzy 自动发现
+</code></pre>
+<h3 id="97">9.7 Global Planner（全局规划器）</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Parameter（参数）</th>
+<th>Value（值）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>算法</td>
+<td>NavfnPlanner</td>
+</tr>
+<tr>
+<td>tolerance</td>
+<td>0.5</td>
+</tr>
+<tr>
+<td>allow_unknown</td>
+<td>true</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="slam-mapper_params_online_asyncyaml">十、SLAM Configuration（SLAM 配置，mapper_params_online_async.yaml）</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Parameter（参数）</th>
+<th>Value（值）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base_frame</code></td>
+<td>base_link</td>
+</tr>
+<tr>
+<td><code>odom_frame</code></td>
+<td>odom</td>
+</tr>
+<tr>
+<td><code>scan_topic</code></td>
+<td>/scan</td>
+</tr>
+<tr>
+<td>分辨率</td>
+<td>0.05m</td>
+</tr>
+<tr>
+<td><code>restamp_tf</code></td>
+<td>true</td>
+</tr>
+<tr>
+<td><code>transform_timeout</code></td>
+<td>2.0s</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>mapping</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2026-05-27">十一、已踩过的坑（2026-05-27 修复记录）</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>问题</th>
+<th>根因</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>velocity_smoother 配置失败</td>
+<td>Jazzy 要求 <code>max_decel</code> 为负数</td>
+<td>改为 <code>[-1.0, 0.0, -1.0]</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>collision_monitor 失败</td>
+<td>缺少 <code>observation_sources</code> 参数</td>
+<td>添加 scan 观测源 + PolygonStop</td>
+</tr>
+<tr>
+<td>3</td>
+<td>map_server 不加载地图</td>
+<td><code>yaml_filename: ""</code> 覆盖了 launch 参数</td>
+<td>删除空值，由 launch 传入</td>
+</tr>
+<tr>
+<td>4</td>
+<td>AMCL 不启动</td>
+<td><code>robot_model_type: differential</code> 不存在于 Jazzy</td>
+<td>改为 <code>nav2_amcl::DifferentialMotionModel</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>behavior 插件失败</td>
+<td><code>/</code> 格式插件名不被 Jazzy 识别</td>
+<td>全部改为 <code>::</code> 格式</td>
+</tr>
+<tr>
+<td>6</td>
+<td>bt_navigator 卡 unconfigured</td>
+<td><code>plugin_lib_names</code> 导致 BT 插件重复注册</td>
+<td>删除整个列表</td>
+</tr>
+<tr>
+<td>7</td>
+<td>bt_navigator 报 Empty Tree</td>
+<td><code>default_nav_to_pose_bt_xml</code> 为空</td>
+<td>指向 Jazzy 默认 BT XML</td>
+</tr>
+<tr>
+<td>8</td>
+<td>docking_server 失败</td>
+<td>缺少 <code>dock_plugins</code></td>
+<td>添加 simple_charging_dock 最小配置</td>
+</tr>
+<tr>
+<td>9</td>
+<td>local costmap 不跟随机器人</td>
+<td>缺 <code>rolling_window: true</code></td>
+<td>添加 rolling_window, 5×5m</td>
+</tr>
+<tr>
+<td>10</td>
+<td>RViz 不显示地图</td>
+<td>Map Durability 不匹配 (Volatile vs TRANSIENT_LOCAL)</td>
+<td>改为 Transient Local</td>
+</tr>
+<tr>
+<td>11</td>
+<td>地图 YAML 相对路径</td>
+<td>map_saver 保存的相对路径 launch 时找不到</td>
+<td>改为绝对路径</td>
+</tr>
+<tr>
+<td>12</td>
+<td>nav.launch.py 布尔值错误</td>
+<td><code>"false"</code> 是字符串不是 Python bool</td>
+<td>改为 <code>"False"</code> / <code>"True"</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td>SLAM 参数未生效</td>
+<td>参数名 <code>params_file</code> → 实际是 <code>slam_params_file</code></td>
+<td>改参数名</td>
+</tr>
+<tr>
+<td>14</td>
+<td><code>~</code> 波浪号不展开</td>
+<td>ROS2 launch 参数不经过 shell</td>
+<td>用绝对路径或 <code>$HOME</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="_5">十二、常用调试命令</h2>
+<pre><code class="language-bash"># 检查当前坐标（导航运行时）
+ros2 topic echo /amcl_pose --once                # AMCL 估计位姿（地图坐标系）
+ros2 run tf2_ros tf2_echo map base_link --once   # TF 变换方式
+
+# 检查坐标（导航未运行，仅里程计）
+ros2 topic echo /odom --once                     # 航迹推算（会漂移）
+
+# 杀手级清理（ROS2 崩了时用）
+pkill -9 -f &quot;ros2\|nav2_&quot;
+sudo rm -rf /dev/shm/fastrtps*
+# 然后重启 PM2 驱动 + Nav2
+
+# 检查 TF 树
+ros2 run tf2_tools view_frames
+
+# 检查话题
+ros2 topic list
+ros2 topic info /map
+
+# 检查节点
+ros2 node list
+ros2 lifecycle get /map_server
+</code></pre>
+<hr />
+<h2 id="_6">十三、Map Files（地图文件）</h2>
+<pre><code>/home/expressone/maps/my_map.yaml
+/home/expressone/maps/my_map.pgm
+</code></pre>
+<p>地图参数:</p>
+<ul>
+<li>尺寸: 53×54 cells</li>
+<li>分辨率: 0.05m/cell</li>
+<li>原点: [-0.983, -1.285]</li>
+<li>模式: trinary</li>
+</ul>
+<hr />
+<h2 id="2026-06-11_1">十四、2026-06-11 旋转漂移修复 (关键改动)</h2>
+<h3 id="141">14.1 根因</h3>
+<p>AGV 稍微旋转就漂移、直线还好。分析：原里程计用 <strong>0x606C RPM 反馈积分</strong> —
+0x606C 单位 0.1 rpm，整数截断。直线 0.3m/s≈34RPM，0.5RPM 误差仅 1.5%；但原地旋转差速仅 ±3.8RPM，
+0.5RPM 误差≈<strong>13%</strong>，角度迅速发散。次要因素：后万向轮打滑、固定 DT 0.05s 欠积分、轮距未标定。</p>
+<h3 id="142-0x6063-5600-countsrev">14.2 治本方案：位置差分里程计 (0x6063 → 5600 counts/rev)</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>改动</th>
+<th>文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据源切 0x6063</td>
+<td>sdo_client.rs</td>
+<td>0x6064 恒为 0 (DS20270DA 不填), 用 0x6063</td>
+</tr>
+<tr>
+<td>编码器分辨率</td>
+<td>电机型号 10530NA1550F20</td>
+<td>&ldquo;A&rdquo; 型 = 1400 线光编 × 4 倍频 = 5600 counts/rev</td>
+</tr>
+<tr>
+<td>单位修正</td>
+<td>kinematics.rs</td>
+<td>RAD_PER_COUNT = TAU/5600 (电机手册命名规则+实测验证)</td>
+</tr>
+<tr>
+<td>SDO 全部不暴露</td>
+<td>0x608F.1/0x2006/0x2007/0x6091</td>
+<td>均返回 abort 或超时, 只能靠电机型号反查</td>
+</tr>
+<tr>
+<td>防计数器回绕</td>
+<td>main.rs</td>
+<td>wrapping_sub 处理 i32 溢出</td>
+</tr>
+<tr>
+<td>中点法积分</td>
+<td>kinematics.rs</td>
+<td>RK2 替代欧拉</td>
+</tr>
+<tr>
+<td>断线冻结</td>
+<td>main.rs</td>
+<td>CAN 故障冻结 pose + 重置计数基线</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="143-robot_localization-ekf">14.3 兜底方案：robot_localization EKF</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>融合信号</td>
+<td>odom 取 [vx, vyaw] + IMU 仅 yaw 角速度</td>
+</tr>
+<tr>
+<td>不融合 IMU 加速度</td>
+<td>双重积分噪声爆炸, 轮式机器人不用</td>
+</tr>
+<tr>
+<td>TF 切换</td>
+<td>EKF 独家广播 odom→base_link; canopen_ros2 &ndash;publish-tf false</td>
+</tr>
+<tr>
+<td>Nav2 衔接</td>
+<td>bt_navigator + velocity_smoother odom_topic → /odometry/filtered</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="144">14.4 配套修复</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>修复项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WHEEL_BASE 0.39</td>
+<td>原地旋转标定脚本, 物理 450mm→有效 0.39m</td>
+</tr>
+<tr>
+<td>AMCL 调参</td>
+<td>alpha1 0.2→0.4, update_min_a 0.2→0.1, transform_tolerance 1.0→0.5</td>
+</tr>
+<tr>
+<td>local_costmap global_frame</td>
+<td>map→odom (EKF 输出平滑无跳变)</td>
+</tr>
+<tr>
+<td>/dev/imu udev</td>
+<td>主机名改变致旧规则失效, 改为按 CH340(1a86:7523) 匹配</td>
+</tr>
+<tr>
+<td>imu_bridge gyro cov</td>
+<td>全 0→0.001 (全 0 被 EKF 当完美测量)</td>
+</tr>
+<tr>
+<td>速度限制下调</td>
+<td>max 0.5→<strong>0.3</strong> m/s, angular 0.4→<strong>0.15</strong> rad/s</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="145">14.5 动车实测清单</h3>
+<ol>
+<li>原地旋转 360°: RViz 激光与地图贴合度, theta 漂移量</li>
+<li>直线 5m: x 误差</li>
+<li>导航绕场: local_costmap (odom 帧) 稳定性</li>
+<li>若旋转仍有小漂移: 调 EKF yaw process_noise, 或 odom0 去掉 vyaw 全信陀螺仪</li>
+</ol>
+<h3 id="146">14.6 详细改动清单</h3>
+<p>→ <code>/home/expressone/ros2_ws/src/exp2_nav/config/改动清单.md</code></p>
+<hr />
+<h2 id="ssh">十五、远程 SSH 注意事项</h2>
+<ul>
+<li>所有 ROS2 命令需：<code>zsh -c 'source ~/.zshrc; source ~/ros2_ws/install/setup.zsh; &lt;cmd&gt;'</code></li>
+<li>或交互式登录后直接操作</li>
+<li>修完源码后需同步 install 目录：<code>cp src/... install/...</code> 或 <code>colcon build --packages-select &lt;pkg&gt;</code></li>
+<li>RViz 需要 DISPLAY + XAUTHORITY 环境变量</li>
+</ul>
+<hr />
+<h2 id="_7">十六、相关文档</h2>
+<ul>
+<li><code>/home/expressone/ros_ws/传感器和执行器资料.md</code> — 旧版传感器资料</li>
+<li><code>~/.hermes/skills/.../ros2-amr-nav2/SKILL.md</code> — 完整 Nav2 开发技能文档</li>
+<li><code>~/.hermes/skills/.../ros2-amr-nav2/references/</code> — 各 session 修复记录</li>
+</ul>
+<hr />
+<h2 id="_8">十七、其他常用脚本命令 &amp;&amp; 注意事项</h2>
+<ul>
+<li>关于如何使用终端工具<strong>Terminator</strong>，可以上网搜索，很简单易学（ctrl+alt+t是启动快捷键，ctrl+shift+o是分屏，ctrl+shift+w是关闭）</li>
+<li><code>./disable.zsh</code> 电机失能（推动之前一定要做；另外不要推得太快否则会有电流产生）</li>
+<li><code>./enable.zsh</code> 电机使能（注：建图、导航之前一定要让电机使能否则走不了）</li>
+<li><code>ros2 run teleop_twist_keyboard teleop_twist_keyboard</code> 用键盘控制小车走（线速度和角速度不建议太高，0.2左右；并且调整速度时要按K键，否则也会移动），具体控制方式见命令</li>
+<li>要根据实际导航场景来调整算法参数如膨胀率，过大的话遇到窄路可能失灵，过小的话遇到宽路会出现靠边走的情况，参数文件位于<code>/home/expressone/ros2_ws/src/exp2_nav/config</code>下的<code>nav2_params.yaml</code>中，建议使用vscode打开，找到<code>global_costmap</code>下的<code>inflation_radius</code>（位于第206行）并且修改</li>
+<li>建图快捷脚本：登录ubuntu后直接运行<code>mapping.zsh</code>，启动建图，并且等待不再有新的蓝色字体跳出后，再执行<code>rviz2 -d ~/exp2.rviz</code>，可观察实时雷达图像。注意要缓慢推动，不要有大幅度晃动；尽量避免扫描重复位置否则图像会出现割裂。</li>
+<li>保存地图直接运行<code>savemap.zsh</code>保存，注意有一定概率保存失败，最好打开<code>ros2_ws/src/exp2_nav/config/maps/</code>下的地图文件查看，如果不符合预期说明未保存成功，需要重试，一般两次都能成功。</li>
+<li>重定位的话，直接在rviz2中手动选择起点即可，注意一定要准确，否则可能导航失败，因为系统认为雷达实际扫描结果与地图差别过大。</li>
+<li>上次导航可能有残留进程和文件，运行<code>./stop_mapping.zsh</code>脚本来清理，之后可以下一次运行</li>
+<li>尽量先在右上角power off之后再关掉电源</li>
+<li>充电时先插车上的，再插插座</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <button class="back-top" type="button" aria-label="返回顶部">↑</button>
+  
+  
+  <script>
+    (() => {
+      const progress = document.querySelector('.progress');
+      const topBtn = document.querySelector('.back-top');
+      const links = [...document.querySelectorAll('.toc-panel a[href^="#"]')];
+      const headings = links
+        .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+        .filter(Boolean);
+
+      function onScroll() {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        if (progress) progress.style.width = max > 0 ? `${scrollY / max * 100}%` : '0%';
+        if (topBtn) topBtn.classList.toggle('show', scrollY > innerHeight);
+
+        let current = headings[0];
+        for (const h of headings) {
+          if (h.getBoundingClientRect().top <= 120) current = h;
+        }
+        links.forEach(a => a.classList.toggle('active', current && a.hash === `#${current.id}`));
+      }
+
+      addEventListener('scroll', onScroll, { passive: true });
+      topBtn?.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
+      onScroll();
+    })();
+  </script>
+
+</body>
+</html>

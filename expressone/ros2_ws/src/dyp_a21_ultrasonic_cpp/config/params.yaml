@@ -1,0 +1,24 @@
+# DYP-A21 ultrasonic CAN driver parameters
+---
+dyp_a21_ultrasonic:
+  ros__parameters:
+    can_interface: "can0"
+    can_bitrate: 500000
+    publish_rate: 1.0
+    sensor_names: ["front", "rear"]
+
+    front:
+      address: 0x08
+      frame_id: "ultrasonic_front"
+      topic: "/snoic/front"
+      field_of_view: 0.7
+      min_range: 0.03
+      max_range: 5.0
+
+    rear:
+      address: 0x09
+      frame_id: "ultrasonic_rear"
+      topic: "/snoic/back"
+      field_of_view: 0.7
+      min_range: 0.03
+      max_range: 5.0

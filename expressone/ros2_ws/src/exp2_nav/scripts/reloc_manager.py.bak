@@ -1,0 +1,281 @@
+#!/usr/bin/env python3
+"""
+reloc_manager - 360 deg rotation + large covariance (odometry-based)
+"""
+import math, time, rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
+from nav_msgs.msg import Odometry
+from std_srvs.srv import Trigger
+from std_msgs.msg import String
+
+
+def _quat_to_yaw(q):
+    siny = 2.0 * (q.w * q.z + q.x * q.y)
+    cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+    return math.atan2(siny, cosy)
+
+
+def _norm_angle(a):
+    while a > math.pi:
+        a -= 2.0 * math.pi
+    while a < -math.pi:
+        a += 2.0 * math.pi
+    return a
+
+
+class RelocManager(Node):
+    DEBOUNCE_SEC = 0.5
+
+    def __init__(self):
+        super().__init__('reloc_manager')
+        self.declare_parameter('dock.x', 1.768)
+        self.declare_parameter('dock.y', 3.188)
+        self.declare_parameter('dock.yaw', 2.361)
+        self.declare_parameter('manual_cov_xx', 1.0)
+        self.declare_parameter('manual_cov_yy', 1.0)
+        self.declare_parameter('manual_cov_yyaw', 0.5)
+        self.declare_parameter('converged_xy_cov', 0.1)
+        self.declare_parameter('localize_timeout_sec', 60.0)
+        self.declare_parameter('swing_enabled', True)
+        self.declare_parameter('swing_speed', 0.2)
+        self.declare_parameter('swing_angle_deg', 360.0)
+        self.declare_parameter('swing_tolerance_deg', 4.0)
+        self._load_params()
+
+        self.state = 'UNLOCALIZED'
+        self.start_time = None
+        self._last_initial_pose_time = 0.0
+        self._converged = False
+        self.last_odom_yaw = 0.0
+
+        self.initial_pose_pub = self.create_publisher(
+            PoseWithCovarianceStamped, '/initialpose', 10)
+        self.initial_pose_sub = self.create_subscription(
+            PoseWithCovarianceStamped, '/initialpose', self._initial_pose_cb, 10)
+        qos = QoSProfile(reliability=ReliabilityPolicy.RELIABLE,
+                         durability=DurabilityPolicy.VOLATILE, depth=10)
+        self.amcl_pose_sub = self.create_subscription(
+            PoseWithCovarianceStamped, '/amcl_pose', self._amcl_pose_cb, qos)
+        self.manual_pose_sub = self.create_subscription(
+            PoseWithCovarianceStamped, '/reloc/set_manual_pose',
+            self._manual_pose_cb, 10)
+        self.status_pub = self.create_publisher(String, '/reloc/status', 10)
+        self.dock_srv = self.create_service(
+            Trigger, '/reloc/dock_calib', self._dock_calib_cb)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.odom_sub = self.create_subscription(
+            Odometry, '/odometry/filtered', self._odom_cb, 10)
+
+        self.rotating = False
+        self.rotation_start_time = 0.0
+        self.rotation_start_yaw = 0.0
+        self.total_rotated = 0.0
+        self.prev_odom_yaw = 0.0
+        self.rotation_timer = None
+
+        self.timer = self.create_timer(1.0, self._timer_cb)
+        self.get_logger().info(
+            'reloc_manager started: 360deg odometry-based rotation, '
+            'cov=1.0 (tolerates ~1.0m error)')
+
+    def _load_params(self):
+        self.dock_x = self.get_parameter('dock.x').value
+        self.dock_y = self.get_parameter('dock.y').value
+        self.dock_yaw = self.get_parameter('dock.yaw').value
+        self.manual_cov_xx = self.get_parameter('manual_cov_xx').value
+        self.manual_cov_yy = self.get_parameter('manual_cov_yy').value
+        self.manual_cov_yyaw = self.get_parameter('manual_cov_yyaw').value
+        self.converged_xy_cov = self.get_parameter('converged_xy_cov').value
+        self.timeout = self.get_parameter('localize_timeout_sec').value
+        self.swing_enabled = self.get_parameter('swing_enabled').value
+        self.swing_speed = float(self.get_parameter('swing_speed').value)
+        swing_angle_deg = float(self.get_parameter('swing_angle_deg').value)
+        self.swing_angle = math.radians(swing_angle_deg)
+        # safety timeout: 150% of expected duration
+        self.rotation_timeout = self.swing_angle / self.swing_speed * 1.5
+
+    def publish_initial_pose(self, x, y, yaw,
+                             cov_xx, cov_yy, cov_yyaw, frame='map'):
+        msg = PoseWithCovarianceStamped()
+        msg.header.frame_id = frame
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.pose.pose.position.x = float(x)
+        msg.pose.pose.position.y = float(y)
+        msg.pose.pose.position.z = 0.0
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        msg.pose.pose.orientation.z = sy
+        msg.pose.pose.orientation.w = cy
+        cov = [0.0] * 36
+        cov[0] = float(cov_xx)
+        cov[7] = float(cov_yy)
+        cov[35] = float(cov_yyaw)
+        msg.pose.covariance = cov
+        self._last_initial_pose_time = time.time()
+        self.initial_pose_pub.publish(msg)
+
+    def _enter_localizing(self):
+        self.state = 'LOCALIZING'
+        self.start_time = time.time()
+        self._converged = False
+        self._publish_status()
+        if self.swing_enabled:
+            self._start_rotation()
+        else:
+            self.get_logger().info('swing disabled')
+
+    # ────────────────────── odometry ──────────────────────
+    def _odom_cb(self, msg: Odometry):
+        self.last_odom_yaw = _quat_to_yaw(msg.pose.pose.orientation)
+
+    # ────────────────────── 360deg rotation ───────────────
+    def _start_rotation(self):
+        if self.rotation_timer is not None:
+            self.rotation_timer.cancel()
+        self.rotating = True
+        self.rotation_start_time = time.time()
+        self.rotation_start_yaw = self.last_odom_yaw
+        self.total_rotated = 0.0
+        self.prev_odom_yaw = self.last_odom_yaw
+        self.rotation_timer = self.create_timer(0.05, self._rotation_step)
+        self.get_logger().info(
+            f'Starting {math.degrees(self.swing_angle):.0f}deg rotation '
+            f'at {self.swing_speed:.2f} rad/s '
+            f'(cov={self.manual_cov_xx:.1f},{self.manual_cov_yy:.1f})')
+
+    def _rotation_step(self):
+        if not self.rotating or \
+           self.state not in ('LOCALIZING', 'CONVERGED'):
+            return
+
+        # accumulate odometry-based rotation
+        delta = _norm_angle(self.last_odom_yaw - self.prev_odom_yaw)
+        self.total_rotated += abs(delta)
+        self.prev_odom_yaw = self.last_odom_yaw
+
+        # stop when 360deg reached (odometry-based)
+        if self.total_rotated >= self.swing_angle:
+            self.get_logger().info(
+                f'Rotation complete: {math.degrees(self.total_rotated):.0f}deg '
+                f'(target {math.degrees(self.swing_angle):.0f}deg), '
+                f'converged={self._converged}')
+            if not self._converged:
+                self.get_logger().warn(
+                    'Rotation done but NOT converged. Re-click (<1m error).')
+                self.state = 'UNLOCALIZED'
+            self._stop_rotation()
+            return
+
+        # safety timeout fallback
+        elapsed = time.time() - self.rotation_start_time
+        if elapsed > self.rotation_timeout:
+            self.get_logger().warn(
+                f'Rotation timeout ({elapsed:.0f}s > {self.rotation_timeout:.0f}s), '
+                f'rotated {math.degrees(self.total_rotated):.0f}deg')
+            if not self._converged:
+                self.state = 'UNLOCALIZED'
+            self._stop_rotation()
+            return
+
+        twist = Twist()
+        twist.angular.z = float(self.swing_speed)
+        self.cmd_vel_pub.publish(twist)
+
+    def _stop_rotation(self):
+        if not self.rotating and self.rotation_timer is None:
+            return
+        self.rotating = False
+        if self.rotation_timer is not None:
+            self.rotation_timer.cancel()
+            self.rotation_timer = None
+        self.cmd_vel_pub.publish(Twist())
+
+    # ────────────────────── callbacks ────────────────────
+    def _initial_pose_cb(self, msg: PoseWithCovarianceStamped):
+        now = time.time()
+        if now - self._last_initial_pose_time < self.DEBOUNCE_SEC:
+            return
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        yaw = _quat_to_yaw(msg.pose.pose.orientation)
+        self.get_logger().info(
+            f'rviz click: ({x:.2f},{y:.2f},{math.degrees(yaw):.0f}deg) '
+            f'cov=({self.manual_cov_xx:.1f},{self.manual_cov_yy:.1f}) +360deg')
+        self.publish_initial_pose(
+            x, y, yaw, self.manual_cov_xx, self.manual_cov_yy,
+            self.manual_cov_yyaw, msg.header.frame_id or 'map')
+        self._enter_localizing()
+
+    def _amcl_pose_cb(self, msg: PoseWithCovarianceStamped):
+        if self.state != 'LOCALIZING':
+            return
+        cov_x = msg.pose.covariance[0]
+        cov_y = msg.pose.covariance[7]
+        if cov_x < self.converged_xy_cov and cov_y < self.converged_xy_cov:
+            elapsed = time.time() - self.start_time if self.start_time else 0.0
+            self.get_logger().info(
+                f'Converged! t={elapsed:.1f}s '
+                f'cov=({cov_x:.4f},{cov_y:.4f}) '
+                f'pos=({msg.pose.pose.position.x:.2f},'
+                f'{msg.pose.pose.position.y:.2f}) '
+                f'waiting for rotation to finish')
+            self.state = 'CONVERGED'
+            self._converged = True
+            self._publish_status()
+
+    def _manual_pose_cb(self, msg: PoseWithCovarianceStamped):
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        yaw = _quat_to_yaw(msg.pose.pose.orientation)
+        self.get_logger().info(
+            f'Manual: ({x:.2f},{y:.2f},{math.degrees(yaw):.0f}deg)')
+        self.publish_initial_pose(
+            x, y, yaw, self.manual_cov_xx, self.manual_cov_yy,
+            self.manual_cov_yyaw, msg.header.frame_id or 'map')
+        self._enter_localizing()
+
+    def _dock_calib_cb(self, request, response):
+        self._stop_rotation()
+        self.get_logger().info(
+            f'Dock: ({self.dock_x:.2f},{self.dock_y:.2f},'
+            f'{math.degrees(self.dock_yaw):.0f}deg)')
+        self.publish_initial_pose(
+            self.dock_x, self.dock_y, self.dock_yaw, 0.01, 0.01, 0.001)
+        self.state = 'CONVERGED'
+        self._publish_status()
+        response.success = True
+        response.message = f'Dock calibrated ({self.dock_x:.2f},{self.dock_y:.2f})'
+        return response
+
+    def _timer_cb(self):
+        self._publish_status()
+        if self.state == 'LOCALIZING' and self.start_time:
+            if time.time() - self.start_time > self.timeout:
+                self._stop_rotation()
+                self.get_logger().warn(
+                    f'Timeout ({self.timeout:.0f}s). Re-click.')
+                self.state = 'UNLOCALIZED'
+                self.start_time = None
+
+    def _publish_status(self):
+        msg = String()
+        msg.data = self.state
+        self.status_pub.publish(msg)
+
+
+def main():
+    rclpy.init()
+    node = RelocManager()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

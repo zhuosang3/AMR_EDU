@@ -1,0 +1,72 @@
+# robot_localization EKF — 融合轮式里程计 + IMU 角速度
+#
+# 输入:
+#   /odom (canopen_ros2, 0x6064 位置差分): vx + vyaw (差分量, 不取绝对位姿)
+#   /imu  (imu_bridge, JY901):           yaw 角速度 only
+#     - orientation_covariance[0] = -1 → 姿态被忽略 (磁力计室内不可信)
+#     - linear_acceleration 不融合 (加速度双重积分噪声爆炸, 轮式机器人不用)
+# 输出:
+#   /odometry/filtered + TF odom→base_link
+#
+# ⚠️ canopen_ros2 必须以 --publish-tf false 启动, 否则双 TF 打架!
+
+ekf_filter_node:
+  ros__parameters:
+    use_sim_time: false
+
+    frequency: 20.0          # 与 odom 输入同频
+    sensor_timeout: 0.2
+    two_d_mode: true         # 平面机器人: 忽略 z/roll/pitch
+    publish_tf: true         # EKF 接管 odom→base_link
+    publish_acceleration: false
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom        # EKF 工作在 odom 帧 (map→odom 仍归 AMCL)
+
+    # ── 轮式里程计: 只信速度 (差分量), 不信积分出来的绝对位姿 ──
+    # [x, y, z, roll, pitch, yaw,
+    #  vx, vy, vz, vroll, vpitch, vyaw,
+    #  ax, ay, az]
+    odom0: /odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  false, false,
+                   false, false, true,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 5
+
+    # ── IMU: 只信 yaw 角速度 (陀螺仪) ──
+    # 不融合姿态 (磁力计在室内/电机旁不可信, bridge 已置 -1)
+    # 不融合线加速度 (轮式机器人标准做法)
+    imu0: /imu
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: false
+
+    # ── 过程噪声: 默认值对低速 AGV 偏大, 适当收敛 ──
+    # 只列对角线相关项, 其余用默认
+    process_noise_covariance: [0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.05, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.06, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.03, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.03, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.06, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.025, 0.0, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.025, 0.0, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.04, 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,  0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,  0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.02, 0.0,  0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,  0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.01, 0.0,
+                               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.015]

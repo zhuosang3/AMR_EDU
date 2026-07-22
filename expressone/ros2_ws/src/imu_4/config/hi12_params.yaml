@@ -1,0 +1,38 @@
+# HI12 IMU ROS2 Node — Default Parameters
+#
+# These parameters can be overridden at launch time:
+#   ros2 launch hi12_imu hi12_imu.launch.py device:=/dev/ttyS6 baudrate:=460800
+#
+# Or changed at runtime:
+#   ros2 param set /hi12_imu baudrate 460800
+
+/**:
+  ros__parameters:
+    # Serial port device
+    # Orange Pi 5 Plus UART4_M2: /dev/ttyS4 (or /dev/ttyS6 on some kernels)
+    device: "/dev/ttyS4"
+
+    # Baud rate
+    #   115200  — default, supports up to ~200 Hz with full data
+    #   460800  — recommended for >200 Hz (500 Hz, 1000 Hz)
+    #   921600  — maximum for very high rate (1000-2000 Hz on HI12M0)
+    baudrate: 115200
+
+    # TF frame ID
+    frame_id: "imu_link"
+
+    # Maximum publish rate in Hz (0 = publish every incoming frame)
+    # Set this to avoid flooding downstream nodes with >200Hz data
+    publish_hz: 200
+
+    # Angular velocity covariance (X, Y, Z diagonal)
+    # HI12 specs (in-run bias stability):
+    #   HI12M0: ~2.5 °/h gyro bias → (2.5/3600)² ≈ 4.8e-7 rad²/s²
+    #   HI12SX: ~0.3 °/h gyro bias → (0.3/3600)² ≈ 6.9e-9 rad²/s²
+    # Use conservative values for real-world conditions:
+    angular_velocity_covariance: 0.01
+
+    # Linear acceleration covariance (X, Y, Z diagonal)
+    # HI12 accel in-run bias stability: ~20-36 µg → (36e-6 * 9.8)² ≈ 1.2e-7 m²/s⁴
+    # Use conservative value:
+    linear_acceleration_covariance: 0.1

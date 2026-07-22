@@ -1,0 +1,172 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="exp2">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+    EXP2 — 差分驱动机器人（前驱 + 后万向轮）
+    
+    原点: 前轮轴前 15mm
+    x → 前, y → 左, z → 上
+    
+    底盘: 525mm(宽) × 600mm(长) × 200mm(高)
+    轮距: 450mm   轮半径: 84.5mm
+    驱动轮: base_link 正下方，y=±225mm（左前轮 +225，右前轮 -225）
+    底盘中心: x=-230mm（相对 base_link 向后）
+    激光雷达: x=+40mm, y=0, z=+200mm (车头正前方)
+  ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- ─── 材质定义 ─── -->
+  <material name="chassis_gray">
+    <color rgba="0.3 0.3 0.35 1.0"/>
+  </material>
+  <material name="wheel_black">
+    <color rgba="0.1 0.1 0.1 1.0"/>
+  </material>
+  <material name="laser_red">
+    <color rgba="0.9 0.2 0.2 1.0"/>
+  </material>
+
+  <!-- ─── 宏: 惯性矩阵 (简单近似, Nav2/costmap 不依赖惯性) ─── -->
+  <xacro:macro name="box_inertial" params="mass l w h">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (w*w + h*h) / 12}"
+        iyy="${mass * (l*l + h*h) / 12}"
+        izz="${mass * (l*l + w*w) / 12}"
+        ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertial" params="mass r length">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (3*r*r + length*length) / 12}"
+        iyy="${mass * r*r / 2}"
+        izz="${mass * (3*r*r + length*length) / 12}"
+        ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ═══════════════════════════════════════════════════════════
+    BASE LINK — 前轮轴前 15mm
+  ═══════════════════════════════════════════════════════════════ -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="-0.230 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.600 0.525 0.200"/>
+      </geometry>
+      <material name="chassis_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.230 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.600 0.525 0.200"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertial mass="15" l="0.600" w="0.525" h="0.200"/>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════
+    左驱动轮
+  ═══════════════════════════════════════════════════════════════ -->
+  <joint name="base_to_left_wheel" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel"/>
+    <origin xyz="0 0.225 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="left_wheel">
+    <visual>
+      <geometry>
+        <cylinder radius="0.0845" length="0.04"/>
+      </geometry>
+      <material name="wheel_black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.0845" length="0.04"/>
+      </geometry>
+    </collision>
+    <xacro:cylinder_inertial mass="0.5" r="0.0845" length="0.04"/>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════
+    右驱动轮
+  ═══════════════════════════════════════════════════════════════ -->
+  <joint name="base_to_right_wheel" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel"/>
+    <origin xyz="0 -0.225 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="right_wheel">
+    <visual>
+      <geometry>
+        <cylinder radius="0.0845" length="0.04"/>
+      </geometry>
+      <material name="wheel_black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.0845" length="0.04"/>
+      </geometry>
+    </collision>
+    <xacro:cylinder_inertial mass="0.5" r="0.0845" length="0.04"/>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════
+    IMU (HI12M0-MI1-000)
+  ═══════════════════════════════════════════════════════════ -->
+  <joint name="base_to_imu" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0.01 0 0.200" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link">
+    <visual>
+      <geometry>
+        <box size="0.04 0.04 0.02"/>
+      </geometry>
+      <material name="laser_red"/>
+    </visual>
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.00001" iyy="0.00001" izz="0.00001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════
+    激光雷达 (科力 LSE-2027DE)
+  ═══════════════════════════════════════════════════════════ -->
+  <joint name="base_to_laser" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser"/>
+    <origin xyz="0.040 0 0.200" rpy="0 0 0"/>
+  </joint>
+
+  <link name="laser">
+    <visual>
+      <geometry>
+        <cylinder radius="0.04" length="0.06"/>
+      </geometry>
+      <material name="laser_red"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.04" length="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.3"/>
+      <inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+</robot>
