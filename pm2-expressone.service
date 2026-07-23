@@ -1,0 +1,22 @@
+[Unit]
+Description=PM2 process manager
+Documentation=https://pm2.keymetrics.io/
+After=network.target
+
+[Service]
+Type=forking
+User=expressone
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+Environment=PATH=/home/expressone/.cargo/bin:/home/expressone/MongoDB/bin:/home/expressone/nodejs/bin:/home/expressone/.nvm/versions/node/v24.16.0/bin:/home/expressone/.cargo/bin:/home/expressone/MongoDB/bin:/home/expressone/nodejs/bin:/opt/ros/jazzy/opt/gz_msgs_vendor/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:/opt/ros/jazzy/opt/gz_ogre_next_vendor/bin:/opt/ros/jazzy/bin:/home/expressone/.local/bin:/home/expressone/.cargo/bin:/home/expressone/MongoDB/bin:/home/expressone/nodejs/bin:/home/expressone/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/expressone/.nvm/versions/node/v24.16.0/bin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=PM2_HOME=/home/expressone/.pm2
+PIDFile=/home/expressone/.pm2/pm2.pid
+Restart=on-failure
+
+ExecStart=/home/expressone/.nvm/versions/node/v24.16.0/lib/node_modules/pm2/bin/pm2 resurrect
+ExecReload=/home/expressone/.nvm/versions/node/v24.16.0/lib/node_modules/pm2/bin/pm2 reload all
+ExecStop=/home/expressone/.nvm/versions/node/v24.16.0/lib/node_modules/pm2/bin/pm2 kill
+
+[Install]
+WantedBy=multi-user.target
