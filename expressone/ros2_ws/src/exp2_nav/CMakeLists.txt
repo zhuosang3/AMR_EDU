@@ -10,6 +10,7 @@ install(
 
 install(PROGRAMS
   scripts/reloc_manager.py
+  scripts/scan_matcher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
