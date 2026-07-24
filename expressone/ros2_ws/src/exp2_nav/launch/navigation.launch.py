@@ -5,10 +5,12 @@
 
 用法：ros2 launch exp2_nav navigation.launch.py
 
-重定位模式:
-  自动:  启动后 3s 自动全局定位（大协方差 → 粒子撒满全图），收敛后自动就绪
+重定位模式(reloc_mode 参数, 默认 bbs; 各模式独立, 无自动回退):
+  bbs(默认): rviz 点选大概位置(2m 内) → 全 yaw 两级粗到细匹配 → 直接 CONVERGED(不转车)
+             score 过高/无 scan → LOCALIZING_FAILED(不旋转, 等重新点击)
+  rotate:   独立兜底, 360° 旋转 + AMCL(会转车); 仅 reloc_mode:=rotate 时用
   充电桩: ros2 service call /reloc/dock_calib std_srvs/srv/Trigger
-  手动:   ros2 topic pub /reloc/set_manual_pose geometry_msgs/msg/PoseWithCovarianceStamped "..."
+  手动位姿: ros2 topic pub /reloc/set_manual_pose geometry_msgs/msg/PoseWithCovarianceStamped "..."
 """
 import os
 from ament_index_python.packages import get_package_share_directory
