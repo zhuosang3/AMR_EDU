@@ -384,6 +384,25 @@ reloc_manager:
   ros__parameters:
     use_sim_time: false
 
+    # ══ 重定位模式 ══
+    # 'mh'     = 默认: 单帧匹配在此环境多解(实测真值常非最优), 不盲信 matcher。
+    #           发宽协方差 initialpose 覆盖窗口内多模态 → 不旋转, 收敛期动态降 AMCL 运动门限,
+    #           静止 1~5s 协方差收敛到真值(cov<阈值→CONVERGED)。matcher 仅做 top-N 诊断。
+    # 'rotate' = v1 兜底: 360°旋转 + AMCL(约33s), 仅 reloc_mode=rotate 时用
+    reloc_mode: mh
+    scan_map_yaml: /home/expressone/maps/my_map.yaml  # mh 诊断 matcher 用的地图
+    scan_cap_m: 8.0            # 扫描渲染半径上限(m)
+
+    # ── mh 模式参数 ──
+    mh_cov_xy: 0.5             # initialpose xy 协方差(σ², σ≈0.7m; 收紧信任点击,排除>1.4m假吸引子。点偏多则调大)
+    mh_cov_yyaw: 0.3           # yaw 协方差(rad², σ≈31°; 收紧排除反向假模态。点击方向不准则调大)
+    mh_topk: 5                 # top-N 多解诊断候选数
+    # mh 诊断 matcher 粗搜参数(仅日志展示多解, 不决定位姿)
+    mh_window_m: 2.0           # 点击位置窗口半径(m)
+    mh_coarse_step_m: 1.0      # 粗搜网格(m)
+    mh_coarse_yaw_step_deg: 10
+    mh_trim_frac: 0.85         # 取贴合最好85%(扔15%动态杂物离群)
+
     # ── 充电桩在地图中的固定坐标（需根据实际场地标定）──
     dock:
       x: 1.768
