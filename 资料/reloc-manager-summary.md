@@ -160,7 +160,7 @@ TF: map → odom（AMCL）→ base_link（EKF）→ laser / imu_link（static）
    - B：收敛后校验（pos 离点击太远 / matcher 评分差 → 判失败重点，防"自信报错"）。
    - C：可疑时小幅旋转（60~90°，非 360°）给 AMCL parallax 消歧（最鲁棒但动车）。
    - 继续调 `mh_cov_xy/yyaw`。
-2. **rotate 模式独立兜底未实测 cmd_vel_smoothed 修复**（会动车，留用户）。
+2. **rotate 模式已实测通过（2026-07-24）**：点击→360°旋转（实测 361°，里程计控角准）→AMCL 9.8s 收敛 cov(0.041,0.087)→平滑减速停车→CONVERGED。**cmd_vel_smoothed 修复确认有效（车真转）**。比 mh 稳但慢（~30s）+ 动车，作 mh 失效时的可靠兜底。
 3. **launch docstring 过时**（仍提"3s 全局定位/PM2"）。
 4. **⚠️ 代码未提交 git**：所有改动仅在 working directory，无版本控制保护。建议尽早 commit。
 5. **2m 窗口远点击**：mh 诊断 matcher 在 ±2m 内搜；用户保证点击 2m 内（远点击会搜错区域）。
